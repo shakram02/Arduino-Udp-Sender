@@ -80,37 +80,25 @@ public class MainActivity extends AppCompatActivity {
             showToast("Port number is invalid");
         } else {
             // Correct params
-            Editable message = ((EditText) findViewById(R.id.textAreaMessage)).getText();
+            final Editable message = ((EditText) findViewById(R.id.textAreaMessage)).getText();
 
             if (message.length() == 0) return;
 
-            byte[] bytes = message.toString().getBytes();
 
-            try {
+            // Network operations must be started on a separate
+            // thread other than the UI thread
+            new Thread() {
+                public void run() {
 
-                // Create the packet containing the message, IP and port number
-                final DatagramPacket packet = new DatagramPacket(bytes, bytes.length,
-                        InetAddress.getByName(ipString), Short.parseShort(portString));
-
-                //sendPacket(message.toString(), ipString, Short.parseShort(portString))
-
-                // Network operations must be started on a separate
-                // thread other than the UI thread
-                new Thread() {
-                    public void run() {
-
-                        if (sendPacket(packet)) {
-                            String reply = receivePacket();
-                            showToastOnUiThread(reply);
-                        }
+                    if (sendPacket(message.toString(), ipString, Short.parseShort(portString))) {
+                        String reply = receivePacket();
+                        showToastOnUiThread(reply);
                     }
-                }.start();
+                }
+            }.start();
 
-                message.clear();    // Clear the message edit text
+            message.clear();    // Clear the message edit text
 
-            } catch (IOException e) {
-                showToast(e.getMessage());
-            }
 
         }
     }

@@ -21,18 +21,12 @@ import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity {
 
-    // Regex for validating IP addresses
-    private static final Pattern IP_ADDRESS
-            = Pattern.compile(
-            "((25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])\\.(25[0-5]|2[0-4]"
-                    + "[0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(25[0-5]|2[0-4][0-9]|[0-1]"
-                    + "[0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}"
-                    + "|[1-9][0-9]|[0-9]))");
-
     private DatagramSocket socket;
     private EditText ipEditText;
     private EditText portEditText;
-    private static final int TIMEOUT_MILLIS = 2000;   // Wait for 3 secs for each socket operation before time out
+    private EditText messageEditText;
+    // Socket operation time out in milliseconds
+    private static final int TIMEOUT_MILLIS = 2000;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
         // NOTE: this must exist after "setContentView(R.layout.activity_main);"
         ipEditText = ((EditText) findViewById(R.id.editTextIp));
         portEditText = ((EditText) findViewById(R.id.editTextPort));
-
+        messageEditText = ((EditText) findViewById(R.id.textAreaMessage));
         try {
             socket = new DatagramSocket();  // Create a UDP socket
             socket.setBroadcast(true);  // Enable broadcasts
@@ -65,6 +59,11 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    public void onDestroy() {
+        this.socket.close();    // Destroy the socket when the app closes
+    }
+
     private void sendMessage() {
         final String ipString = ipEditText.getText().toString();
         final String portString = portEditText.getText().toString();
@@ -80,8 +79,9 @@ public class MainActivity extends AppCompatActivity {
             showToast("Port number is invalid");
         } else {
             // Correct params
-            final Editable message = ((EditText) findViewById(R.id.textAreaMessage)).getText();
+            Editable editable = messageEditText.getText();
 
+            final String message = editable.toString(); // Get the text in the EditText
             if (message.length() == 0) return;
 
 
@@ -90,16 +90,14 @@ public class MainActivity extends AppCompatActivity {
             new Thread() {
                 public void run() {
 
-                    if (sendPacket(message.toString(), ipString, Short.parseShort(portString))) {
+                    if (sendPacket(message, ipString, Short.parseShort(portString))) {
                         String reply = receivePacket();
                         showToastOnUiThread(reply);
                     }
                 }
             }.start();
 
-            message.clear();    // Clear the message edit text
-
-
+            editable.clear();    // Clear the message edit text
         }
     }
 
@@ -157,9 +155,9 @@ public class MainActivity extends AppCompatActivity {
     private boolean sendPacket(String message, String ipString, short portNumber) {
 
         byte messageBytes[] = message.getBytes();
-
+        if (message.isEmpty()) return false;
+        
         try {
-
             // Create the packet containing the message, IP and port number
             final DatagramPacket packet = new DatagramPacket(messageBytes, messageBytes.length,
                     InetAddress.getByName(ipString), portNumber);
@@ -183,34 +181,15 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private boolean sendPacket(DatagramPacket packet) {
-
-        try {
-
-            socket.send(packet);
-
-            // If you want to manipulate the GUI, you must run that
-            // code on the MainUI thread
-            showToastOnUiThread("Sent!");
-            return true;    // Everything wen well
-
-        } catch (final IOException e) {
-
-            showToastOnUiThread(e.getMessage());
-            return false;   // Something went wrong
-        }
-    }
-
     private String receivePacket() {
         try {
             byte buffer[] = new byte[255];
             DatagramPacket p = new DatagramPacket(buffer, buffer.length);
             socket.receive(p);
             return new String(p.getData());    // Convert the packet to a string and return it
-        } catch (IOException e) {
-            showToastOnUiThread(e.getMessage());
+        } catch (IOException ignored) {
         }
-        return "";  // Return nothing
+        return "Failed to receive!";  // Return nothing
     }
 
     private void showToastOnUiThread(final String text) {
@@ -225,4 +204,13 @@ public class MainActivity extends AppCompatActivity {
     private void showToast(String message) {
         Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
     }
+
+    //--------------------------------------------------------------------------------------
+    // Regex for validating IP addresses
+    private static final Pattern IP_ADDRESS
+            = Pattern.compile(
+            "((25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9])\\.(25[0-5]|2[0-4]"
+                    + "[0-9]|[0-1][0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(25[0-5]|2[0-4][0-9]|[0-1]"
+                    + "[0-9]{2}|[1-9][0-9]|[1-9]|0)\\.(25[0-5]|2[0-4][0-9]|[0-1][0-9]{2}"
+                    + "|[1-9][0-9]|[0-9]))");
 }

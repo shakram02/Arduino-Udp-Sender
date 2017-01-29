@@ -156,7 +156,7 @@ public class MainActivity extends AppCompatActivity {
 
         byte messageBytes[] = message.getBytes();
         if (message.isEmpty()) return false;
-        
+
         try {
             // Create the packet containing the message, IP and port number
             final DatagramPacket packet = new DatagramPacket(messageBytes, messageBytes.length,
@@ -164,10 +164,8 @@ public class MainActivity extends AppCompatActivity {
 
             socket.send(packet);
 
-            // If you want to manipulate the GUI, you must run that
-            // code on the MainUI thread
-            showToastOnUiThread("Sent!");
-            return true;    // Everything wen well
+            // The UDP packet left the pc safely, we don't know if it was received somewhere
+            return true;
 
         } catch (final UnknownHostException e) {
 
@@ -189,7 +187,9 @@ public class MainActivity extends AppCompatActivity {
             return new String(p.getData());    // Convert the packet to a string and return it
         } catch (IOException ignored) {
         }
-        return "Failed to receive!";  // Return nothing
+
+        // Nobody replied to the packet, maybe the address didn't exist in the network
+        return "Nothing received, timeout";
     }
 
     private void showToastOnUiThread(final String text) {

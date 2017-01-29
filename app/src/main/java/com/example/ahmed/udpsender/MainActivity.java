@@ -16,6 +16,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity {
@@ -65,8 +66,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void sendMessage() {
-        String ipString = ipEditText.getText().toString();
-        String portString = portEditText.getText().toString();
+        final String ipString = ipEditText.getText().toString();
+        final String portString = portEditText.getText().toString();
 
         boolean ipValidated = validateIp(ipString);
         boolean portValidated = validatePort(portString);
@@ -91,11 +92,13 @@ public class MainActivity extends AppCompatActivity {
                 final DatagramPacket packet = new DatagramPacket(bytes, bytes.length,
                         InetAddress.getByName(ipString), Short.parseShort(portString));
 
+                //sendPacket(message.toString(), ipString, Short.parseShort(portString))
 
                 // Network operations must be started on a separate
                 // thread other than the UI thread
                 new Thread() {
                     public void run() {
+
                         if (sendPacket(packet)) {
                             String reply = receivePacket();
                             showToastOnUiThread(reply);
@@ -161,6 +164,35 @@ public class MainActivity extends AppCompatActivity {
             return false;
         }
 
+    }
+
+    private boolean sendPacket(String message, String ipString, short portNumber) {
+
+        byte messageBytes[] = message.getBytes();
+
+        try {
+
+            // Create the packet containing the message, IP and port number
+            final DatagramPacket packet = new DatagramPacket(messageBytes, messageBytes.length,
+                    InetAddress.getByName(ipString), portNumber);
+
+            socket.send(packet);
+
+            // If you want to manipulate the GUI, you must run that
+            // code on the MainUI thread
+            showToastOnUiThread("Sent!");
+            return true;    // Everything wen well
+
+        } catch (final UnknownHostException e) {
+
+            showToastOnUiThread("Couldn't find host");
+            return false;
+
+        } catch (final IOException e) {
+
+            showToastOnUiThread(e.getMessage());
+            return false;   // Something went wrong
+        }
     }
 
     private boolean sendPacket(DatagramPacket packet) {

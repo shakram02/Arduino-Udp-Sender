@@ -42,13 +42,14 @@ public class MainActivity extends AppCompatActivity {
         ipEditText = ((EditText) findViewById(R.id.editTextIp));
         portEditText = ((EditText) findViewById(R.id.editTextPort));
         messageEditText = ((EditText) findViewById(R.id.textAreaMessage));
+
         try {
             socket = new DatagramSocket();  // Create a UDP socket
             socket.setBroadcast(true);  // Enable broadcasts
             socket.setSoTimeout(TIMEOUT_MILLIS); // Set timeout for socket operations
 
         } catch (SocketException e) {
-            Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
+            showToast(e.getMessage());
         }
 
         fab.setOnClickListener(new View.OnClickListener() {
@@ -77,13 +78,10 @@ public class MainActivity extends AppCompatActivity {
             showToast("IP is invalid");
         } else if (!portValidated) {
             showToast("Port number is invalid");
-        } else {
-            // Correct params
+        } else {    // Parameters are syntactically correct
+
             Editable editable = messageEditText.getText();
-
             final String message = editable.toString(); // Get the text in the EditText
-            if (message.length() == 0) return;
-
 
             // Network operations must be started on a separate
             // thread other than the UI thread
@@ -192,6 +190,8 @@ public class MainActivity extends AppCompatActivity {
         return "Nothing received, timeout";
     }
 
+    // A toast is the tiny message you see on the screen
+    
     private void showToastOnUiThread(final String text) {
         runOnUiThread(new Runnable() {
             @Override

@@ -1,10 +1,7 @@
 package com.example.ahmed.udpsender;
 
-import android.app.Activity;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
@@ -19,7 +16,6 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.util.regex.Pattern;
 
 public class MainActivity extends AppCompatActivity {
@@ -35,6 +31,7 @@ public class MainActivity extends AppCompatActivity {
     private DatagramSocket socket;
     private EditText ipEditText;
     private EditText portEditText;
+    private static final int TIMEOUT_MILLIS = 2000;   // Wait for 3 secs for each socket operation before time out
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,6 +50,8 @@ public class MainActivity extends AppCompatActivity {
         try {
             socket = new DatagramSocket();  // Create a UDP socket
             socket.setBroadcast(true);  // Enable broadcasts
+            socket.setSoTimeout(TIMEOUT_MILLIS); // Set timeout for socket operations
+
         } catch (SocketException e) {
             Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
         }
@@ -97,17 +96,15 @@ public class MainActivity extends AppCompatActivity {
                 // thread other than the UI thread
                 new Thread() {
                     public void run() {
-                        try {
-                            // If you want to manipulate the GUI, you must run that
-                            // code on the MainUI thread
-                            socket.send(packet);
-                        } catch (IOException e) {
-                            e.printStackTrace();
+                        if (sendPacket(packet)) {
+                            String reply = receivePacket();
+                            showToastOnUiThread(reply);
                         }
                     }
                 }.start();
 
-                message.clear();
+                message.clear();    // Clear the message edit text
+
             } catch (IOException e) {
                 showToast(e.getMessage());
             }
@@ -115,9 +112,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void showToast(String message) {
-        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
-    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -148,8 +142,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (!IP_ADDRESS.matcher(ip).matches()) {
             // Show a message
-            Toast.makeText(getApplicationContext(),
-                    "Please enter a valid IP Address", Toast.LENGTH_SHORT).show();
+            showToast("Please enter a valid IP Address");
             return false;
         } else {
             return true;
@@ -161,12 +154,55 @@ public class MainActivity extends AppCompatActivity {
         if (text.length() == 0) return false;
 
         try {
-            Short.parseShort(text);
+            Short.parseShort(text); // If this succeeds, then it's a valid port
             return true;
         } catch (NumberFormatException e) {
             showToast("A valid port number is between 1 and " + Short.MAX_VALUE);
             return false;
         }
 
+    }
+
+    private boolean sendPacket(DatagramPacket packet) {
+
+        try {
+
+            socket.send(packet);
+
+            // If you want to manipulate the GUI, you must run that
+            // code on the MainUI thread
+            showToastOnUiThread("Sent!");
+            return true;    // Everything wen well
+
+        } catch (final IOException e) {
+
+            showToastOnUiThread(e.getMessage());
+            return false;   // Something went wrong
+        }
+    }
+
+    private String receivePacket() {
+        try {
+            byte buffer[] = new byte[255];
+            DatagramPacket p = new DatagramPacket(buffer, buffer.length);
+            socket.receive(p);
+            return new String(p.getData());    // Convert the packet to a string and return it
+        } catch (IOException e) {
+            showToastOnUiThread(e.getMessage());
+        }
+        return "";  // Return nothing
+    }
+
+    private void showToastOnUiThread(final String text) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                showToast(text);
+            }
+        });
+    }
+
+    private void showToast(String message) {
+        Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
     }
 }

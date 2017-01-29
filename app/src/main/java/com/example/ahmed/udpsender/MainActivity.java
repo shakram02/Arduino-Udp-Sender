@@ -55,7 +55,7 @@ public class MainActivity extends AppCompatActivity {
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                sendMessage();
+                onSendButtonClick();
             }
         });
     }
@@ -65,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
         this.socket.close();    // Destroy the socket when the app closes
     }
 
-    private void sendMessage() {
+    private void onSendButtonClick() {
         final String ipString = ipEditText.getText().toString();
         final String portString = portEditText.getText().toString();
 
@@ -191,7 +191,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     // A toast is the tiny message you see on the screen
-    
+
     private void showToastOnUiThread(final String text) {
         runOnUiThread(new Runnable() {
             @Override
